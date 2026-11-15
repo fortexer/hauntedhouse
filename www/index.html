@@ -6,7 +6,7 @@ html,body{margin:0;height:100%;background:#000;color:#eadcc8;font-family:Lalezar
 input{user-select:text;-webkit-user-select:text}
 canvas#c{position:fixed;inset:0;width:100%;height:100%}
 svg{width:1em;height:1em;display:block}
-#hud{position:fixed;top:0;left:0;right:0;display:none;justify-content:space-between;align-items:flex-start;padding:calc(env(safe-area-inset-top) + 10px) 12px 0;direction:ltr;pointer-events:none;font-size:15px;text-shadow:0 0 6px #000}
+#hud{position:fixed;top:0;left:0;right:0;display:none;justify-content:space-between;align-items:flex-start;padding:calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 12px) 0 calc(env(safe-area-inset-left) + 12px);direction:ltr;pointer-events:none;font-size:15px;text-shadow:0 0 6px #000}
 .pill{display:flex;align-items:center;gap:8px;background:#0008;border:1px solid #5a1212;border-radius:20px;padding:6px 12px;margin-bottom:6px}.pill svg{font-size:18px;color:#d33}
 #fx{display:none;border-color:#b8902a}#fx svg{color:#ffd24a}
 #bat{width:70px;height:9px;background:#2a1212;border-radius:5px;overflow:hidden}#bi{height:100%;background:linear-gradient(90deg,#c1121f,#e8c25a)}
@@ -35,6 +35,24 @@ input{text-align:center;letter-spacing:10px;width:210px}
 #big.go{animation:bg 2.1s ease-out}
 @keyframes bg{0%{opacity:0;transform:scale(.3)}10%{opacity:1;transform:scale(1.2)}20%{transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(1.15)}}
 #eic{font-size:64px;color:#c11}
+.row{display:flex;gap:10px}.row .b{min-width:130px}
+#kp{direction:ltr;display:grid;grid-template-columns:repeat(6,52px);gap:6px}
+.b.k{min-width:0;width:52px;height:44px;padding:0;font-size:22px}
+@media (max-height:520px){
+.ov{gap:6px;padding:8px}
+#lgo{width:64px;height:64px;border-radius:16px}
+.ov h1,.tt{font-size:34px}
+.ov p{line-height:1.5;max-width:420px}
+.b,select,input{padding:7px 18px;font-size:17px;min-width:170px}
+.b svg{font-size:19px}
+input{width:150px;letter-spacing:8px}
+#eic{font-size:38px}
+#big b{font-size:110px}#big span{font-size:16px}
+#jb{width:130px;height:130px;bottom:calc(env(safe-area-inset-bottom) + 16px)}
+#btn{width:84px;height:84px;bottom:calc(env(safe-area-inset-bottom) + 24px)}
+#msg{top:14%;font-size:17px}
+#pad>i{font-size:28px!important}
+}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud"><div><div class="pill"><i data-i="lock"></i><b id="D" dir="ltr"></b></div><div class="pill"><span data-t="lvl"></span> <b id="L"></b></div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><button id="pb"><i data-i="pause"></i></button><div class="pill"><i data-i="battery"></i><div id="bat"><div id="bi"></div></div></div><div class="pill" id="fx"></div></div></div>
@@ -45,7 +63,7 @@ input{text-align:center;letter-spacing:10px;width:210px}
 <div class="ov" id="sets"><h1 data-t="set"></h1><span data-t="lang"></span><select id="lg"><option value="fa">فارسی</option><option value="en">English</option></select><span data-t="vol"></span><input id="vo" type="range" min="0" max="1" step=".05" style="letter-spacing:0;padding:6px"><button class="b" id="rs"><i data-i="rot"></i><span data-t="reset"></span></button><button class="b" id="bk"><i data-i="home"></i><span data-t="back"></span></button></div>
 <div class="ov" id="pz"><h1 data-t="paused"></h1><button class="b" id="rsm"><i data-i="play"></i><span data-t="resume"></span></button><button class="b" id="rst"><i data-i="rot"></i><span data-t="restart"></span></button><button class="b" id="hm"><i data-i="home"></i><span data-t="home"></span></button></div>
 <div class="ov" id="end"><div id="eic"></div><h1 id="eh"></h1><p id="ep"></p><button class="b" id="eb"></button></div>
-<div class="ov" id="pad"><i data-i="lock" style="font-size:44px;color:#d22"></i><p data-t="door"></p><input id="code" type="tel" maxlength="3" inputmode="numeric"><button class="b" id="ok"><span>OK</span></button><button class="b" id="pc"><i data-i="home"></i><span data-t="back"></span></button><p id="pe" style="color:#e55"></p></div>
+<div class="ov" id="pad"><i data-i="lock" style="font-size:44px;color:#d22"></i><p data-t="door"></p><input id="code" type="tel" maxlength="3" readonly inputmode="none"><div id="kp"></div><div class="row"><button class="b" id="ok"><span>OK</span></button><button class="b" id="pc"><i data-i="home"></i><span data-t="back"></span></button></div><p id="pe" style="color:#e55;margin:0"></p></div>
 <div id="scare"></div>
 <script>
 const ICON={"play": "<polygon points=\"6 3 20 12 6 21 6 3\"/>", "pause": "<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"/><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>", "exit": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><polyline points=\"16 17 21 12 16 7\"/><line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\"/>", "lock": "<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/>", "battery": "<rect width=\"16\" height=\"10\" x=\"2\" y=\"7\" rx=\"2\" ry=\"2\"/><line x1=\"22\" x2=\"22\" y1=\"11\" y2=\"13\"/>", "skull": "<path d=\"m12.5 17-.5-1-.5 1h1z\"/><path d=\"M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z\"/><circle cx=\"15\" cy=\"12\" r=\"1\"/><circle cx=\"9\" cy=\"12\" r=\"1\"/>", "rot": "<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\"/><path d=\"M3 3v5h5\"/>", "home": "<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>", "gear": "<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>", "hide": "<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\"/><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\"/><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\"/><path d=\"m2 2 20 20\"/>", "out": "<path d=\"M13 4h3a2 2 0 0 1 2 2v14\"/><path d=\"M2 20h3\"/><path d=\"M13 20h9\"/><path d=\"M10 12v.01\"/><path d=\"M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z\"/>", "zap": "<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\"/>", "torch": "<path d=\"M18 6c0 2-2 2-2 4v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10c0-2-2-2-2-4V2h12z\"/><line x1=\"6\" x2=\"18\" y1=\"6\" y2=\"6\"/><line x1=\"12\" x2=\"12\" y1=\"12\" y2=\"12\"/>", "boot": "<path d=\"M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z\"/><path d=\"M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z\"/><path d=\"M16 17h4\"/><path d=\"M4 13h4\"/>"};
@@ -165,6 +183,8 @@ $('btn').addEventListener('pointerdown',doSearch);
 $('pc').onclick=()=>{show(null);run=true;last=performance.now()};
 const nd=v=>String(v).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-1776).replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/\D/g,'');
 $('code').addEventListener('input',e=>{e.target.value=nd(e.target.value).slice(0,3)});$('code').addEventListener('keydown',e=>{if(e.key=='Enter')$('ok').onclick()});
+(function(){const kp=$('kp');['1','2','3','4','5','<','6','7','8','9','0'].forEach(d=>{const b=document.createElement('button');b.className='b k';b.textContent=d=='<'?'⌫':d;b.onclick=()=>{const c=$('code');c.value=d=='<'?c.value.slice(0,-1):(c.value.length<3?c.value+d:c.value);$('pe').textContent=''};kp.appendChild(b)})})();
+addEventListener('keydown',e=>{if(!vis('pad'))return;if(/^\d$/.test(e.key)){const c=$('code');if(c.value.length<3)c.value+=e.key}else if(e.key=='Backspace')$('code').value=$('code').value.slice(0,-1);else if(e.key=='Enter')$('ok').onclick()});
 $('ok').onclick=()=>{if(nd($('code').value)==G.code){show(null);G.opening=true;G.openT=0;run=true;last=performance.now();noise(.6,.3,500)}else{$('pe').textContent=t('wrong');thump(1)}};
 function scare(ms){const c=document.createElement('canvas');c.width=SP.mb.width;c.height=SP.mb.height;c.getContext('2d').drawImage(SP.mb,0,0);const s=$('scare');s.innerHTML='';s.appendChild(c);s.style.display='block';scream();navigator.vibrate&&navigator.vibrate(260);clearTimeout(scare.t);scare.t=setTimeout(()=>s.style.display='none',ms||700)}
 function killed(){if(G.dead)return;G.dead=true;run=false;scare(1000);setTimeout(()=>end(t('dead'),'',t('retry'),()=>start(lvl),'skull'),1050)}
