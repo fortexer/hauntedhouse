@@ -1,0 +1,114 @@
+name: Build release APK
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      make_promos:
+        description: 'Also generate promo images (slower)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # needed to attach the APK to a GitHub Release on tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: 17}
+      - run: npm install
+
+      - name: Download Lalezar font (OFL) into the app
+        run: |
+          mkdir -p www/fonts
+          URL=$(curl -s "https://fonts.googleapis.com/css2?family=Lalezar" | grep -o 'https://[^)]*\.ttf' | head -1)
+          if [ -n "$URL" ]; then curl -L -o www/fonts/Lalezar-Regular.ttf "$URL"; fi
+          if [ ! -s www/fonts/Lalezar-Regular.ttf ]; then curl -L -o www/fonts/Lalezar-Regular.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/lalezar/Lalezar-Regular.ttf; fi
+          ls -la www/fonts
+
+      - name: Promo images with Lalezar (optional, manual runs only)
+        if: ${{ inputs.make_promos }}
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y libraqm0 libfribidi0
+          pip install playwright pillow && python -m playwright install --with-deps chromium
+          python promo/make_promos.py
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.make_promos }}
+        with: {name: promo-images, path: promo/promo*.png, if-no-files-found: ignore}
+
+      - run: npx cap add android
+      - run: npx cap sync android
+
+      - name: Version, icons and portrait
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          CODE=$((100 + GITHUB_RUN_NUMBER))
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CODE=$CODE" >> $GITHUB_ENV
+          # every build needs a HIGHER versionCode, otherwise stores/phones refuse it as an update
+          sed -i "s/versionCode [0-9]\+/versionCode $CODE/; s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+          grep -q "versionCode $CODE" android/app/build.gradle
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            n=${d%%:*}; s=${d##*:}; mkdir -p android/app/src/main/res/mipmap-$n
+            for f in ic_launcher ic_launcher_round ic_launcher_foreground; do convert logo.png -resize ${s}x${s} android/app/src/main/res/mipmap-$n/$f.png; done
+          done
+          sed -i 's/<activity /<activity android:screenOrientation="portrait" /' android/app/src/main/AndroidManifest.xml
+
+      # RELEASE build only (never assembleDebug)
+      - run: cd android && chmod +x gradlew && ./gradlew assembleRelease
+
+      - name: Sign with YOUR release key
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+        run: |
+          ALIAS=${KS_ALIAS:-key}
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > ks.jks
+            PASS="$KS_PASS"
+          else
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              echo "::error::Release tag build needs KEYSTORE_BASE64 and KEYSTORE_PASSWORD secrets (run the 'Create signing key' workflow once)."
+              exit 1
+            fi
+            echo "::warning::No keystore secrets found. This APK is signed with a TEMPORARY key: fine for testing, DO NOT upload it to Myket (updates would fail)."
+            PASS=$(openssl rand -hex 12)
+            keytool -genkeypair -keystore ks.jks -alias key -keyalg RSA -keysize 2048 -validity 10000 -storepass "$PASS" -keypass "$PASS" -dname "CN=Temporary Test Key"
+            ALIAS=key
+          fi
+          BT=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
+          echo "BT=$BT" >> $GITHUB_ENV
+          APK="HauntedHouse-v${VERSION}-${CODE}.apk"
+          echo "APK=$APK" >> $GITHUB_ENV
+          $BT/zipalign -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks ks.jks --ks-key-alias "$ALIAS" --ks-pass pass:"$PASS" --out "$APK" aligned.apk
+          rm -f ks.jks
+
+      - name: Verify this is a real release build
+        run: |
+          $BT/apksigner verify --print-certs "$APK" | tee certs.txt
+          if grep -q "Android Debug" certs.txt; then echo "::error::APK is signed with the Android DEBUG key"; exit 1; fi
+          $BT/aapt2 dump badging "$APK" > badging.txt
+          grep -E "^package:|application-label:" badging.txt
+          if grep -q "application-debuggable" badging.txt; then echo "::error::APK is DEBUGGABLE - not a release build"; exit 1; fi
+          echo "OK: release, not debuggable, versionCode $CODE"
+
+      - uses: actions/upload-artifact@v4
+        with: {name: HauntedHouse-release, path: 'HauntedHouse-v*.apk'}
+
+      - name: Attach APK to GitHub Release (tag builds)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: HauntedHouse-v*.apk
