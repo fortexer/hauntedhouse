@@ -50,7 +50,7 @@ jobs:
       - name: Install ImageMagick (no longer preinstalled on ubuntu-latest)
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
-      - name: Version, icons and portrait
+      - name: Version, icons and landscape
         run: |
           VERSION=$(node -p "require('./package.json').version")
           CODE=$((100 + GITHUB_RUN_NUMBER))
@@ -66,7 +66,7 @@ jobs:
             n=${d%%:*}; s=${d##*:}; mkdir -p android/app/src/main/res/mipmap-$n
             for f in ic_launcher ic_launcher_round ic_launcher_foreground; do $IM logo.png -resize ${s}x${s} android/app/src/main/res/mipmap-$n/$f.png; done
           done
-          sed -i 's/<activity /<activity android:screenOrientation="portrait" /' android/app/src/main/AndroidManifest.xml
+          sed -i 's/<activity /<activity android:screenOrientation="sensorLandscape" /' android/app/src/main/AndroidManifest.xml
 
       # RELEASE build only (never assembleDebug)
       - run: cd android && chmod +x gradlew && ./gradlew assembleRelease
