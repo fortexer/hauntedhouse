@@ -47,6 +47,9 @@ jobs:
       - run: npx cap add android
       - run: npx cap sync android
 
+      - name: Install ImageMagick (no longer preinstalled on ubuntu-latest)
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
       - name: Version, icons and portrait
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -57,10 +60,11 @@ jobs:
           sed -i "s/versionCode [0-9]\+/versionCode $CODE/; s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
           grep -E "versionCode|versionName" android/app/build.gradle
           grep -q "versionCode $CODE" android/app/build.gradle
+          IM=convert; command -v convert >/dev/null || IM="magick"
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
           for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
             n=${d%%:*}; s=${d##*:}; mkdir -p android/app/src/main/res/mipmap-$n
-            for f in ic_launcher ic_launcher_round ic_launcher_foreground; do convert logo.png -resize ${s}x${s} android/app/src/main/res/mipmap-$n/$f.png; done
+            for f in ic_launcher ic_launcher_round ic_launcher_foreground; do $IM logo.png -resize ${s}x${s} android/app/src/main/res/mipmap-$n/$f.png; done
           done
           sed -i 's/<activity /<activity android:screenOrientation="portrait" /' android/app/src/main/AndroidManifest.xml
 
