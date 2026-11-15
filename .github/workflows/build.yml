@@ -66,7 +66,11 @@ jobs:
             n=${d%%:*}; s=${d##*:}; mkdir -p android/app/src/main/res/mipmap-$n
             for f in ic_launcher ic_launcher_round ic_launcher_foreground; do $IM logo.png -resize ${s}x${s} android/app/src/main/res/mipmap-$n/$f.png; done
           done
-          sed -i 's/<activity /<activity android:screenOrientation="sensorLandscape" /' android/app/src/main/AndroidManifest.xml
+          # Lock to landscape only. NOTE: in Capacitor's manifest "<activity" is followed by a newline, not a space.
+          MF=android/app/src/main/AndroidManifest.xml
+          sed -i 's/<activity\b/<activity android:screenOrientation="sensorLandscape"/' $MF
+          grep -n "screenOrientation" $MF
+          [ "$(grep -c 'android:screenOrientation="sensorLandscape"' $MF)" = "1" ] || { echo "::error::Landscape lock was NOT applied to AndroidManifest.xml"; exit 1; }
 
       # RELEASE build only (never assembleDebug)
       - run: cd android && chmod +x gradlew && ./gradlew assembleRelease
